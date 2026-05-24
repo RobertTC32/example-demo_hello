@@ -1,0 +1,27 @@
+{
+  "name": "example-demo_hello",
+  "version": "1.0.0",
+  "description": "first demo application in go",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx @tailwindcss/cli -i ./src/resources/style.tailwindcss.css -o ./dist/public/style.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobertTC32/example-demo_hello.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RobertTC32/example-demo_hello/issues"
+  },
+  "homepage": "https://github.com/RobertTC32/example-demo_hello#readme",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.0",
+    "tailwindcss": "^4.3.0"
+  }
+}
