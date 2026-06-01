@@ -2,6 +2,8 @@
 # ".env" file not stored in git, but ".env.example" is stored in git for reference; 
 include ./.env
 
+MAKE_TIME = $(shell date +"%FT%H:%M:%SZ")
+
 all: run
 
 clean:
@@ -36,4 +38,48 @@ build: clean generate-twc
 # Install tdm-gcc toolchain on Windows 11 with WSL2 for Linux cross-compilation:
 #   # Download and install tdm-gcc from https://jmeubank.github.io/tdm-gcc/
 # Run command: (cd dist && ./main.exe)
+
+clean-db:
+	rm -rf dist-db/
+	mkdir -p ./dist-db
+
+test-db: 
+# create test database in temp directory from scratch;
+	# test-db ##################################################
+	rm -rf ./temp/
+	mkdir -p ./temp/db
+	# sql scripts in src-db/resources/ are used for database migration
+	cp -r ./src-db/resources ./temp
+	# start mariadb container with mounted volumes for database and migration files;
+	docker run --name mydb --rm -d -v ./temp/db:/var/lib/mysql:Z  -v ./temp/resources:/docker-entrypoint-initdb.d -p $(DB_PORT):3306 -e MARIADB_USER=$(DB_USER) -e MARIADB_PASSWORD=$(DB_PASSWORD) -e MARIADB_ROOT_PASSWORD=$(DB_ROOT_PASSWORD) -e MARIADB_DATABASE=$(DB_NAME) mariadb:12.2 
+# docker exec -it mydb mariadb -uroot -p
+
+build-db: clean-db
+# create dist-db directory from scratch with database and migration files;
+# resulting directory can be used for linux database deployment; 
+	# build-db ##################################################
+	mkdir -p ./dist-db/db
+	cp -r ./src-db/resources ./dist-db
+
+build-oci: build
+	# build-oci ##################################################
+	docker build . -t $(OCI_NAME):latest --label "version=${OCI_VERSION}" --label "build=$(MAKE_TIME)"
+	docker image ls | grep $(OCI_NAME) 
+	docker image inspect $(OCI_NAME):latest
+	
+run-oci: 
+	# run-oci ##################################################
+	docker run  --name myapp --rm -p $(OCI_PORT):$(OCI_INT_PORT) -e OCI_PORT=$(OCI_PORT) -e DB_PORT=$(DB_PORT) -e DB_HOST=host.docker.internal -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) -e DB_NAME=$(DB_NAME) -e LOG_LEVEL=debug $(OCI_NAME):latest
+
+save-oci:
+	# save-oci ##################################################
+	mkdir -p ./temp
+	docker save -o temp/$(OCI_NAME).tar $(OCI_NAME):latest
+	du -sh temp/$(OCI_NAME).tar
+# docker rmi $(OCI_NAME):latest
+
+load-oci:
+	# load-oci ##################################################
+	docker load -i temp/$(OCI_NAME).tar
+	docker image ls | grep $(OCI_NAME)
 
