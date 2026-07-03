@@ -1,67 +1,36 @@
 package main
 
 import (
-	"fmt"
-	"html/template"
+	"RobertTC32/example-demo_hello/src/app"
+	"RobertTC32/example-demo_hello/src/commons"
+	"context"
+	"embed"
+	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
+//go:embed resources
+var ResourcesEmbed embed.FS
+
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", helloHandleFunc)
-	fs := http.FileServer(http.Dir("./public"))
-	mux.Handle("GET /public/", http.StripPrefix("/public/", fs))
+	commons.LoadEnvFile()
+	commons.InitLoggerFromEnv()
+	slog.Debug("main::main() - Executing")
 	//
-	LoadEnvFile()
-	port := os.Getenv("OCI_PORT")
-	intPort := os.Getenv("OCI_INT_PORT")
-	if !IsRunningInDockerContainer() {
-		intPort = port
+	router := http.NewServeMux()
+	resourcesFs, _ := fs.Sub(ResourcesEmbed, "resources")
+	app.NewController(router, resourcesFs)
+	//
+	srv, _ := commons.NewServer(router)
+	host := os.Getenv("APP_HOST")
+	port := os.Getenv("APP_PORT")
+	slog.Info("main::main() - Web Server is available at http://" + host + ":" + port)
+	slog.Info("main::main() - Press Ctrl+C to stop")
+	if err := srv.RunServer(context.Background(), 5*time.Second); err != nil {
+		slog.Error("main::main() - Server error", "error", err)
 	}
-	srv := http.Server{
-		Addr:    ":" + intPort,
-		Handler: mux,
-	}
-	fmt.Println("Web Server is available at http://localhost:" + port)
-	fmt.Println("Press Ctrl+C to stop")
-	srv.ListenAndServe()
-}
-
-type HelloPageData struct {
-	FullName  string
-	CurrentDT string
-}
-
-func LoadEnvFile() string {
-	// external configuration using environment variables
-	var name = os.Getenv("ENV_NAME")
-	if len(name) == 0 {
-		name = ".env"
-	}
-	godotenv.Load(name)
-	return name
-}
-
-func helloHandleFunc(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("./resources/hello.html"))
-	d := HelloPageData{FullName: "Everybody", CurrentDT: time.Now().Format(time.RFC3339)}
-	err := tmpl.Execute(w, d)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func IsRunningInDockerContainer() bool {
-	// docker creates a .dockerenv file at the root
-	// of the directory tree inside the container.
-	// if this file exists then the viewer is running
-	// from inside a container so return true
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
-	return false
+	slog.Info("main::main() - Stopped")
 }

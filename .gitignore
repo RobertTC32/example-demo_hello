@@ -1,7 +1,5 @@
 # ===== My ignores =====
 
-dist/
-dist-db/
 node_modules/
 temp/
 

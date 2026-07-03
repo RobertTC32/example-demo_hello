@@ -1,0 +1,30 @@
+package app
+
+import "log/slog"
+
+templ BasePage(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title }</title>
+			<link rel="stylesheet" href="public/style.css"/>
+		</head>
+		<body class="max-w-lvw m-3 md:m-6 text-sm md:text-base font-serif" bg-blue-200>
+			{ children... }
+		</body>
+	</html>
+}
+
+templ HelloPage(fullName string, currentDT string) {
+	{{ slog.Debug("view-hello_templ::HelloPage() - Executing") }}
+	@BasePage("demo_hello") {
+		<h1 class="text-xl md:text-2xl font-bold text-blue-400">
+			Hello, from { fullName }!
+		</h1>
+		<p>
+			Current date and time: { currentDT }
+		</p>
+	}
+}
